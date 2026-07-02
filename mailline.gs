@@ -96,7 +96,7 @@ function checkMailAndNotify() {
   threads.forEach(function (thread) {
     const message = thread.getMessages()[thread.getMessageCount() - 1];
     const text =
-      '📩 メールが届きました\n' +
+      'メールが届きました\n' +
       '───────────\n' +
       '件名：' + message.getSubject() + '\n' +
       '差出人：' + message.getFrom() + '\n' +
