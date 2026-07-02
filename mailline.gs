@@ -3,24 +3,27 @@
  * Mailline — Gmail → LINE 通知スクリプト（Google Apps Script）
  * =====================================================
  * 指定した宛先アドレスに届いたメールのうち、件名に指定ワードを
- * 含むものをLINE公式アカウント（Messaging API）でプッシュ通知します。
+ * 含むものをLINE公式アカウント（Messaging API）で通知します。
+ * 通知用アカウントを友だち追加した全員（スタッフ等）に届きます。
  *
  * 【対応メール】Gmailのみ（Gmail / Google Workspace / Gmailへ転送設定済みのアドレス）
  *
+ * 【重要】通知専用のLINE公式アカウントを新規作成して使ってください。
+ * 顧客が友だち登録している既存アカウントは絶対に使わないでください。
+ * 通知が顧客全員に届いてしまいます。
+ *
  * 【事前準備】
- * 1. LINE公式アカウントを作成し、Messaging APIを有効化
+ * 1. 通知専用のLINE公式アカウントを新規作成し、Messaging APIを有効化
  * 2. LINE Developersコンソールで「チャネルアクセストークン（長期）」を発行
- * 3. 自分のユーザーID（Uから始まる文字列）を確認
- *    （LINE Developersコンソール > チャネル基本設定 > あなたのユーザーID）
- * 4. 作成した公式アカウントを自分のLINEで友だち追加
  *
  * 【設置手順】
  * 1. Google Apps Script（script.google.com）で新規プロジェクト作成
- * 2. このコードを全文コピペ
- * 3. 下の「設定エリア」を書き換える
- * 4. 関数「setup」を選択して1回実行（初回は権限承認が必要）
+ * 2. このコードを全文コピペし、下の「設定エリア」を書き換える
+ * 3. 関数「setup」を選択して1回実行（初回は権限承認が必要）
  *    → ラベル作成と5分ごとの自動チェックが設定されます
- * 5. 関数「sendTestMessage」を実行してLINEにテスト通知が届けば完了
+ * 4. 通知を受け取りたい人（スタッフ等）がQRコードで友だち追加
+ * 5. 関数「sendTestMessage」を実行し、全員に届けば完了
+ * ※デプロイ作業は不要です
  */
 
 // =====================================================
@@ -29,9 +32,6 @@
 
 // チャネルアクセストークン（長期）
 const CHANNEL_ACCESS_TOKEN = 'ここにチャネルアクセストークンを貼り付け';
-
-// 通知先のLINEユーザーID（Uから始まる文字列）
-const LINE_USER_ID = 'ここにユーザーIDを貼り付け';
 
 // 通知対象にする宛先メールアドレス（複数指定可・いずれかに一致で対象）
 // ※Gmailで受信できるアドレスのみ対象（Gmail / Google Workspace / Gmailへ転送設定済みのアドレス）
@@ -80,7 +80,7 @@ function setup() {
  * テスト通知（設定確認用）
  */
 function sendTestMessage() {
-  sendLinePush('【テスト】Gmail→LINE通知の設定が完了しました');
+  sendLineBroadcast('【テスト】Maillineの設定が完了しました');
 }
 
 /**
@@ -102,7 +102,7 @@ function checkMailAndNotify() {
       '差出人：' + message.getFrom() + '\n' +
       '宛先：' + message.getTo() + '\n' +
       '受信：' + Utilities.formatDate(message.getDate(), 'Asia/Tokyo', 'M/d HH:mm');
-    sendLinePush(text);
+    sendLineBroadcast(text);
     thread.addLabel(label); // 通知済みラベルを付与（重複通知防止）
   });
 }
@@ -123,12 +123,11 @@ function buildSearchQuery() {
 }
 
 /**
- * LINE Messaging APIでプッシュ送信
+ * LINE Messaging APIで友だち全員にブロードキャスト送信
  */
-function sendLinePush(text) {
-  const url = 'https://api.line.me/v2/bot/message/push';
+function sendLineBroadcast(text) {
+  const url = 'https://api.line.me/v2/bot/message/broadcast';
   const payload = {
-    to: LINE_USER_ID,
     messages: [{ type: 'text', text: text }],
   };
   const params = {
